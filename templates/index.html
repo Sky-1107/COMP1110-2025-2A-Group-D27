@@ -1,1 +1,55 @@
 {% extends 'base.html' %}
+{% block content %}
+<h2>Dashboard</h2>
+<div class="cards">
+  <div class="card"><h3>Total Spending</h3><p>HK$ {{ '%.2f'|format(total) }}</p></div>
+  <div class="card"><h3>Top Categories</h3>
+    <ul>
+      {% for cat, amt in top_categories %}
+      <li>{{ cat }}: HK$ {{ '%.2f'|format(amt) }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<h3>Spending by Category</h3>
+<table>
+  <tr><th>Category</th><th>Total</th></tr>
+  {% for category, amount in by_category.items() %}
+  <tr><td>{{ category }}</td><td>HK$ {{ '%.2f'|format(amount) }}</td></tr>
+  {% endfor %}
+</table>
+
+<h3>7-Day Trend</h3>
+<table>
+  <tr><th>Date</th><th>Amount</th></tr>
+  {% for day, val in trend.items() %}
+  <tr><td>{{ day }}</td><td>HK$ {{ '%.2f'|format(val) }}</td></tr>
+  {% endfor %}
+</table>
+
+<h3>Alerts</h3>
+{% if alerts %}
+<ul>
+  {% for alert in alerts %}
+  <li>{{ alert }}</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No current alerts.</p>
+{% endif %}
+
+<h3>Recent Transactions</h3>
+<table>
+  <tr><th>Date</th><th>Amount</th><th>Category</th><th>Description</th><th>Notes</th></tr>
+  {% for tx in recent %}
+  <tr>
+    <td>{{ tx.date }}</td>
+    <td>HK$ {{ '%.2f'|format(tx.amount) }}</td>
+    <td>{{ tx.category }}</td>
+    <td>{{ tx.description }}</td>
+    <td>{{ tx.notes }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}
