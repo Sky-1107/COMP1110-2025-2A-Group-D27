@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Settings</h2>
+<form method="POST" action="{{ url_for('settings_save') }}">
+  <h3>Categories (comma-separated)</h3>
+  <textarea name="categories" rows="2" cols="80">{{ categories | join(', ') }}</textarea>
+
+  <h3>Budget Rules (one per line: category,period,threshold,alert_type)</h3>
+  <textarea name="rules" rows="6" cols="80">{% for r in rules %}{{ r.category }},{{ r.period }},{{ r.threshold }},{{ r.alert_type }}
+{% endfor %}</textarea>
+
+  <h3>Recurring Rules (one per line: name,category,amount,description,frequency,start_date,end_date)</h3>
+  <textarea name="recurring_rules" rows="6" cols="80">{% for r in recurring_rules %}{{ r.name }},{{ r.category }},{{ r.amount }},{{ r.description }},{{ r.frequency }},{{ r.start_date }},{{ r.end_date or '' }}
+{% endfor %}</textarea>
+
+  <button type="submit">Save Settings</button>
+</form>
+{% endblock %}
