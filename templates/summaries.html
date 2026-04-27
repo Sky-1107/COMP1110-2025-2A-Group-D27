@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Summaries</h2>
+
+<div>
+  <button onclick="exportCSV()">Export CSV</button>
+  <button onclick="exportPDF()">Export PDF</button>
+  <label for="chartSize">Chart Size: </label>
+  <select id="chartSize" onchange="adjustChartSize()">
+    <option value="small">Small</option>
+    <option value="medium" selected>Medium</option>
+    <option value="large">Large</option>
+  </select>
+</div>
+
+<h3>Spending by Category</h3>
+<div style="max-width: 500px; margin: 0 auto;">
+  <canvas id="categoryChart"></canvas>
+</div>
+<table>
+  <tr><th>Category</th><th>Total</th></tr>
+  {% for cat, amt in by_category.items() %}
+  <tr><td>{{ cat }}</td><td>HK$ {{ '%.2f'|format(amt) }}</td></tr>
+  {% endfor %}
+</table>
+
+<h3>Monthly Spending Trend</h3>
+<div style="max-width: 600px; margin: 0 auto;">
+  <canvas id="trendChart"></canvas>
+</div>
+<table>
+  <tr><th>Month</th><th>Total</th></tr>
+  {% for month, amt in zip(months, monthly_values) %}
+  <tr><td>{{ month }}</td><td>HK$ {{ '%.2f'|format(amt) }}</td></tr>
+  {% endfor %}
+</table>
+
+<h3>By Day</h3>
+<table>
+  <tr><th>Date</th><th>Total</th></tr>
+  {% for day, amt in by_day.items() %}
+  <tr><td>{{ day }}</td><td>HK$ {{ '%.2f'|format(amt) }}</td></tr>
+  {% endfor %}
+</table>
+
+<h3>By Week</h3>
+<table>
+  <tr><th>Week</th><th>Total</th></tr>
+  {% for week, amt in by_week.items() %}
+  <tr><td>{{ week }}</td><td>HK$ {{ '%.2f'|format(amt) }}</td></tr>
+  {% endfor %}
+</table>
+
+<h3>By Month</h3>
+<table>
+  <tr><th>Month</th><th>Total</th></tr>
+  {% for month, amt in by_month.items() %}
+  <tr><td>{{ month }}</td><td>HK$ {{ '%.2f'|format(amt) }}</td></tr>
+  {% endfor %}
+</table>
+
+<h3>Trend (30 days)</h3>
+<table>
+  <tr><th>Date</th><th>Total</th></tr>
+  {% for day, amt in trend.items() %}
+  <tr><td>{{ day }}</td><td>HK$ {{ '%.2f'|format(amt) }}</td></tr>
+  {% endfor %}
+</table>
+
+<h3>Top Categories</h3>
+<ul>
+  {% for cat, amt in top_categories %}
+  <li>{{ cat }} : HK$ {{ '%.2f'|format(amt) }}</li>
+  {% endfor %}
+</ul>
+
+<style>
+  #categoryChart, #trendChart {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .chart-container {
+    position: relative;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+</style>
+
+<script>
+let categoryChart, trendChart;
+let chartSizeSettings = {
+  small: { pie: { width: 250, height: 250 }, line: { width: 400, height: 200 } },
+  medium: { pie: { width: 350, height: 350 }, line: { width: 550, height: 250 } },
+  large: { pie: { width: 500, height: 500 }, line: { width: 700, height: 350 } }
+};
+
+function initCharts() {
+  const categoryData = {{ by_category|tojson }};
+  const categoryLabels = Object.keys(categoryData);
+  const categoryValues = Object.values(categoryData);
+
+  const ctx1 = document.getElementById('categoryChart').getContext('2d');
+  if (categoryChart) categoryChart.destroy();
+  categoryChart = new Chart(ctx1, {
+      type: 'pie',
+      data: {
+          labels: categoryLabels,
+          datasets: [{
+              data: categoryValues,
+              backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6384']
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+              legend: { position: 'bottom' }
+          }
+      }
+  });
+
+  const months = {{ months|tojson }};
+  const monthlyValues = {{ monthly_values|tojson }};
+
+  const ctx2 = document.getElementById('trendChart').getContext('2d');
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart(ctx2, {
+      type: 'line',
+      data: {
+          labels: months,
+          datasets: [{
+              label: 'Monthly Spending (HK$)',
+              data: monthlyValues,
+              borderColor: '#36A2EB',
+              backgroundColor: 'rgba(54, 162, 235, 0.1)',
+              fill: true,
+              borderWidth: 2,
+              tension: 0.3
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+              legend: { position: 'bottom' }
+          },
+          scales: {
+              y: {
+                  beginAtZero: true,
+                  ticks: { callback: function(value) { return 'HK$' + value.toFixed(0); } }
+              }
+          }
+      }
+  });
+}
+
+function adjustChartSize() {
+  const size = document.getElementById('chartSize').value;
+  const pieSize = chartSizeSettings[size].pie;
+  const lineSize = chartSizeSettings[size].line;
+  
+  const pieCont = document.getElementById('categoryChart').parentElement;
+  const lineCont = document.getElementById('trendChart').parentElement;
+  
+  pieCont.style.width = pieSize.width + 'px';
+  pieCont.style.height = pieSize.height + 'px';
+  pieCont.style.margin = '0 auto';
+  
+  lineCont.style.width = lineSize.width + 'px';
+  lineCont.style.height = lineSize.height + 'px';
+  lineCont.style.margin = '0 auto';
+  
+  categoryChart.resize();
+  trendChart.resize();
+}
+
+function exportCSV() {
+    window.location.href = '{{ url_for("export_csv_route") }}';
+}
+
+function exportPDF() {
+    window.location.href = '{{ url_for("export_pdf_route") }}';
+}
+
+// Initialize charts on load
+window.addEventListener('load', function() {
+  initCharts();
+  adjustChartSize();
+});
+</script>
+{% endblock %}
