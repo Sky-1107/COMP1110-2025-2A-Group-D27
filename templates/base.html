@@ -1,16 +1,38 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Budget Assistant</title>
-    </head>
-    <body>
-        <header>
-        <h1>Personal Budget and Spending Assistant</h1>
-        </header>
-        <footer>
-        <small>Budget Assistant</small>
-        </footer>
-    </body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Budget Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Personal Budget and Spending Assistant</h1>
+      <nav>
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('add_transaction_form') }}">Add Transaction</a>
+        <a href="{{ url_for('manage_transactions') }}">Manage Transaction</a>
+        <a href="{{ url_for('summaries') }}">Summaries</a>
+        <a href="{{ url_for('alerts_page') }}">Alerts</a>
+        <a href="{{ url_for('settings') }}">Settings</a>
+      </nav>
+    </header>
+    <main>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <section class="flash-messages">
+            {% for category, msg in messages %}
+              <div class="flash {{ category }}">{{ msg }}</div>
+            {% endfor %}
+          </section>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer>
+      <small>Budget Assistant</small>
+    </footer>
+  </body>
 </html>
