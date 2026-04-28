@@ -2,7 +2,7 @@ import datetime
 import os
 from typing import Any, List
 # from budget_core import ???
-# from data_loader import ???
+from data_loader import load_recurring_rules
 
 def days_in_month(year: int, month: int) -> int:
     if month == 12:
@@ -52,7 +52,7 @@ def process_recurring_transactions(data_dir: str, transactions: List[Any]) -> Li
     Load recurring rules, generate new transactions, save updated rules, and return new transactions.
     """
     recurring_file = os.path.join(data_dir, 'recurring_rules.json')
-    rules: List[Any]    # dataclass to be defined in budget_core.py
+    rules = load_recurring_rules(recurring_file)
     new_txs = generate_recurring_transactions(rules, transactions)
     if new_txs:
         # Expected: function_to_save_recurring_rules(rules, recurring_file)

@@ -24,4 +24,12 @@
 
   <button type="submit">Add</button>
 </form>
+<section class="import-section">
+  <h3>Import CSV</h3>
+  <form method="POST" action="{{ url_for('import_transactions') }}" enctype="multipart/form-data">
+    <input type="file" name="csv_file" accept=".csv" />
+    <button type="submit">Upload and Import</button>
+  </form>
+  <p class="help">Required columns: <strong>date, amount, category, description</strong>. Optional: <strong>notes</strong>. Date format: YYYY-MM-DD.</p>
+</section>
 {% endblock %}

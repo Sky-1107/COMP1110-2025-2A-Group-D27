@@ -1,12 +1,14 @@
 import os
 import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, Response
-from data_loader import load_transactions, save_transactions, load_budget_rules, save_budget_rules, load_categories, save_categories, load_recurring_rules, save_recurring_rules, generate_new_transaction_id
+from data_loader import load_transactions, save_transactions, load_budget_rules, save_budget_rules, load_categories, save_categories, load_recurring_rules, save_recurring_rules, generate_new_transaction_id, parse_csv_content
 from budget_core import Transaction, BudgetRule, RecurringRule, DEFAULT_CATEGORIES, spending_by_category, spending_by_period, top_categories, spending_trend, check_alerts, monthly_spending_trend
 from recurring_handler import process_recurring_transactions
 from export_utils import export_csv, export_pdf
 
-DATA_DIR = 'data'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+
 TRANSACTIONS_FILE = os.path.join(DATA_DIR, 'transactions.csv')
 BUDGET_RULES_FILE = os.path.join(DATA_DIR, 'budget_rules.json')
 CATEGORIES_FILE = os.path.join(DATA_DIR, 'categories.json')
@@ -236,6 +238,59 @@ def manage_transactions():
     return render_template('manage_transactions.html', transactions=filtered, categories=categories, filters={'start_date': start_date, 'end_date': end_date, 'category': filter_category})
 
 
+
+@app.route('/transactions/import', methods=['POST'])
+def import_transactions():
+    ensure_data_files()
+    # file field expected to be named 'csv_file'
+    uploaded = request.files.get('csv_file')
+    if not uploaded:
+        flash('No file uploaded.', 'error')
+        return redirect(url_for('manage_transactions'))
+
+    filename = uploaded.filename or ''
+    if not filename.lower().endswith('.csv'):
+        flash('Only CSV files are accepted.', 'error')
+        return redirect(url_for('manage_transactions'))
+
+    try:
+        raw = uploaded.read()
+        if isinstance(raw, bytes):
+            content = raw.decode('utf-8-sig')
+        else:
+            content = str(raw)
+    except Exception as e:
+        flash(f'Could not read uploaded file: {e}', 'error')
+        return redirect(url_for('manage_transactions'))
+
+    categories = load_categories(CATEGORIES_FILE)
+    valid_rows, row_errors = parse_csv_content(content, categories)
+
+    imported = 0
+    transactions = load_transactions(TRANSACTIONS_FILE)
+    for row in valid_rows:
+        new_id = generate_new_transaction_id(transactions)
+        tx = Transaction(date=row['date'], amount=row['amount'], category=row['category'], description=row['description'], notes=row.get('notes', ''), id=new_id)
+        transactions.append(tx)
+        imported += 1
+
+    try:
+        if imported:
+            save_transactions(transactions, TRANSACTIONS_FILE)
+    except Exception as e:
+        flash(f'Could not save imported transactions: {e}', 'error')
+        return redirect(url_for('manage_transactions'))
+
+    rejected = len(row_errors)
+    flash(f'Imported {imported} transactions; {rejected} rows rejected.', 'info')
+
+    # show up to 5 representative error messages
+    for err in row_errors[:5]:
+        flash(f"Row {err.get('row')}: {'; '.join(err.get('errors', []))}", 'error')
+
+    return redirect(url_for('manage_transactions'))
+
+
 @app.route('/summaries', methods=['GET'])
 def summaries():
     ensure_data_files()
@@ -343,4 +398,4 @@ def export_pdf_route():
 
 if __name__ == '__main__':
     ensure_data_files()
-    app.run(debug = True)
+    app.run(debug = True, host='0.0.0.0', port=5001)

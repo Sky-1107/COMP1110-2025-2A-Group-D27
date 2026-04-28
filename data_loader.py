@@ -166,3 +166,70 @@ def generate_new_transaction_id(transactions: List[Transaction]) -> int:
     if not transactions:
         return 1
     return max(tx.id for tx in transactions) + 1
+
+
+def parse_csv_content(content: str, categories: List[str]):
+    """
+    Parse CSV content string for import.
+    Returns a tuple (valid_rows, errors) where valid_rows is a list of dicts
+    with keys: date (date), amount (float), category, description, notes
+    and errors is a list of dicts: {row: int, errors: [messages]}
+    Expected columns: date, amount, category, description, notes(optional)
+    Date format: YYYY-MM-DD
+    """
+    valid = []
+    errors = []
+    if not content:
+        return valid, errors
+    try:
+        # csv module expects a file-like, so splitlines and use DictReader
+        lines = content.splitlines()
+        reader = csv.DictReader(lines)
+    except Exception as e:
+        errors.append({'row': 0, 'errors': [f'Could not parse CSV: {e}']})
+        return valid, errors
+
+    for idx, row in enumerate(reader, start=2):
+        # start=2 to account for header row as row 1
+        row_errors = []
+        if not row:
+            continue
+        date_s = (row.get('date') or '').strip()
+        amount_s = (row.get('amount') or '').strip()
+        category = (row.get('category') or '').strip()
+        description = (row.get('description') or '').strip()
+        notes = (row.get('notes') or '').strip()
+
+        # date
+        date_val = parse_date(date_s)
+        if date_val is None:
+            row_errors.append('Invalid or missing date (YYYY-MM-DD).')
+        else:
+            if date_val > datetime.date.today():
+                row_errors.append('Date cannot be in the future.')
+
+        # amount
+        try:
+            amount_val = float(amount_s)
+            if amount_val < 0:
+                row_errors.append('Amount must be non-negative.')
+        except Exception:
+            amount_val = None
+            row_errors.append('Invalid or missing amount.')
+
+        # category
+        if not category:
+            row_errors.append('Missing category.')
+        elif category not in categories:
+            row_errors.append('Unknown category.')
+
+        # description
+        if not description:
+            row_errors.append('Description is required.')
+
+        if row_errors:
+            errors.append({'row': idx, 'errors': row_errors})
+        else:
+            valid.append({'date': date_val, 'amount': amount_val, 'category': category, 'description': description, 'notes': notes})
+
+    return valid, errors
