@@ -1,0 +1,3 @@
+[
+  { "category": "Transport", "period": "monthly", "threshold": 600, "alert_type": "exceed" }
+]
