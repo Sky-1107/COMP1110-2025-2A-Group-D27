@@ -6,7 +6,9 @@ from budget_core import Transaction, BudgetRule, RecurringRule, DEFAULT_CATEGORI
 from recurring_handler import process_recurring_transactions
 from export_utils import export_csv, export_pdf
 
-DATA_DIR = 'data'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+
 TRANSACTIONS_FILE = os.path.join(DATA_DIR, 'transactions.csv')
 BUDGET_RULES_FILE = os.path.join(DATA_DIR, 'budget_rules.json')
 CATEGORIES_FILE = os.path.join(DATA_DIR, 'categories.json')
@@ -343,4 +345,4 @@ def export_pdf_route():
 
 if __name__ == '__main__':
     ensure_data_files()
-    app.run(debug = True)
+    app.run(debug = True, host='0.0.0.0', port=5001)
