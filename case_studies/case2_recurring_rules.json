@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Monthly MTR Pass",
+    "category": "Transport",
+    "amount": 100.00,
+    "description": "Monthly MTR pass for commute",
+    "frequency": "monthly",
+    "start_date": "2026-01-02",
+    "end_date": null,
+    "last_generated_date": "2026-03-02"
+  }
+]
