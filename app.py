@@ -238,7 +238,6 @@ def manage_transactions():
     return render_template('manage_transactions.html', transactions=filtered, categories=categories, filters={'start_date': start_date, 'end_date': end_date, 'category': filter_category})
 
 
-
 @app.route('/transactions/import', methods=['POST'])
 def import_transactions():
     ensure_data_files()
@@ -398,4 +397,4 @@ def export_pdf_route():
 
 if __name__ == '__main__':
     ensure_data_files()
-    app.run(debug = True, host='0.0.0.0', port=5001)
+    app.run(debug = True, host = '0.0.0.0', port = 5001)

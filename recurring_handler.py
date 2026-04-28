@@ -1,8 +1,8 @@
 import datetime
 import os
 from typing import Any, List
-# from budget_core import ???
-from data_loader import load_recurring_rules
+from budget_core import RecurringRule, Transaction
+from data_loader import load_recurring_rules, save_recurring_rules, generate_new_transaction_id
 
 def days_in_month(year: int, month: int) -> int:
     if month == 12:
@@ -29,10 +29,10 @@ def calculate_next_due_date(last_date: datetime.date, frequency: str) -> datetim
         raise ValueError(f"Unsupported frequency: {frequency}")
 
 def generate_recurring_transactions(
-    recurring_rules: List[Any],         # dataclass to be defined in budget_core.py
-    existing_transactions: List[Any],   # dataclass to be defined in budget_core.py
+    recurring_rules: List[RecurringRule],
+    existing_transactions: List[Transaction],
     today: datetime.date = None
-) -> List[Any]:                         # dataclass to be defined in budget_core.py
+) -> List[Transaction]:
     """
     Generate new transactions for recurring rules that are due.
     Returns a list of new transactions to add.
@@ -43,7 +43,30 @@ def generate_recurring_transactions(
     
     new_transactions = []
     
-    # To be adjusted after budget_core.py and data_loader.py are completed.
+    for rule in recurring_rules:
+        if today < rule.start_date or (rule.end_date and today > rule.end_date):
+            continue
+        
+        # Calculate next due date
+        last_gen = rule.last_generated_date or (rule.start_date - datetime.timedelta(days=1))
+        next_due = calculate_next_due_date(last_gen, rule.frequency)
+        
+        while next_due <= today and (not rule.end_date or next_due <= rule.end_date):
+            # Generate transaction
+            new_id = generate_new_transaction_id(existing_transactions + new_transactions)
+            tx = Transaction(
+                date=next_due,
+                amount=rule.amount,
+                category=rule.category,
+                description=f"[Recurring] {rule.name}",
+                notes=rule.description,
+                id=new_id
+            )
+            new_transactions.append(tx)
+            
+            # Update last_generated_date
+            rule.last_generated_date = next_due
+            next_due = calculate_next_due_date(next_due, rule.frequency)
     
     return new_transactions
 
@@ -55,6 +78,6 @@ def process_recurring_transactions(data_dir: str, transactions: List[Any]) -> Li
     rules = load_recurring_rules(recurring_file)
     new_txs = generate_recurring_transactions(rules, transactions)
     if new_txs:
-        # Expected: function_to_save_recurring_rules(rules, recurring_file)
+        save_recurring_rules(rules, recurring_file)
         pass
     return new_txs
