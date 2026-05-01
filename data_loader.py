@@ -150,9 +150,10 @@ def load_recurring_rules(filepath: str) -> List[RecurringRule]:
                 description = item.get('description', '').strip()
                 frequency = item.get('frequency', '').strip().lower()
                 start_date = parse_date(item.get('start_date', ''))
-                end_date_str = item.get('end_date', None)
+                end_date_str = item.get('end_date')
                 end_date = parse_date(end_date_str) if end_date_str else None
-                last_generated = parse_date(item.get('last_generated_date', '')) if item.get('last_generated_date') else None
+                last_generated_str = item.get('last_generated_date')
+                last_generated = parse_date(last_generated_str) if last_generated_str else None
                 if name and category and amount and description and frequency and start_date:
                     rules.append(RecurringRule(name=name, category=category, amount=amount, description=description, frequency=frequency, start_date=start_date, end_date=end_date, last_generated_date=last_generated))
     except Exception:
