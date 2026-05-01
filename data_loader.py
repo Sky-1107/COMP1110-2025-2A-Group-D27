@@ -45,7 +45,8 @@ def load_transactions(filepath: str) -> Tuple[List[Transaction], List[str]]:
     # Convert valid rows to Transaction objects
     for row in valid_rows:
         try:
-            id_val = int(row.get('id', 0)) if row.get('id') else 0
+            temp_id = row.get('id')
+            id_val = int(temp_id) if temp_id else 0
         except (ValueError, TypeError):
             id_val = 0
         
@@ -314,14 +315,12 @@ def _validate_quote_structure(lines: List[str]) -> List[Dict]:
     Validate that quotes are properly balanced in each line.
     Returns list of error dicts if issues found, empty list if valid.
     """
+
     errors = []
     
     for line_idx, line in enumerate(lines, start=1):
-        if not line:
-            continue
-        
-        # Skip header row
-        if line_idx == 1:
+        # Skip empty rows and header row
+        if not line or line_idx == 1:
             continue
         
         # Track quote state to detect unclosed quotes
@@ -385,7 +384,7 @@ def _detect_binary_file_type(file_bytes: bytes) -> str:
     return None
 
 
-def validate_csv_file_upload(file_bytes: bytes) -> Tuple[str, str]:
+def validate_csv_file_upload(file_bytes: bytes) -> Tuple[str | None, str | None]:
     """
     Validate an uploaded file for CSV compatibility.
     Returns (error_message, None) on error, or (None, decoded_content) on success.
@@ -395,6 +394,7 @@ def validate_csv_file_upload(file_bytes: bytes) -> Tuple[str, str]:
     2. Valid UTF-8 encoding
     3. Reasonable file size
     """
+    
     # Check file size (prevent huge uploads)
     if len(file_bytes) == 0:
         return "File is empty.", None

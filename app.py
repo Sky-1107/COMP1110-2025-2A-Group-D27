@@ -1,6 +1,6 @@
 import os
 import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, Response, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 from data_loader import load_transactions, save_transactions, load_budget_rules, save_budget_rules, load_categories, save_categories, load_recurring_rules, save_recurring_rules, generate_new_transaction_id, parse_csv_content, validate_csv_file_upload
 from budget_core import Transaction, BudgetRule, RecurringRule, DEFAULT_CATEGORIES, spending_by_category, spending_by_period, top_categories, spending_trend, check_alerts, monthly_spending_trend, validate_categories
 from recurring_handler import process_recurring_transactions
