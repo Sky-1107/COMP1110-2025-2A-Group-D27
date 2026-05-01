@@ -2,7 +2,7 @@ import csv
 import json
 import os
 import datetime
-from typing import List
+from typing import List, Tuple, Dict
 from budget_core import Transaction, BudgetRule, RecurringRule, DEFAULT_CATEGORIES
 
 
@@ -13,36 +13,52 @@ def parse_date(s: str):
         return None
 
 
-def load_transactions(filepath: str) -> List[Transaction]:
+def load_transactions(filepath: str) -> Tuple[List[Transaction], List[str]]:
+    """
+    Load transactions from CSV file with strict validation.
+    Returns (transactions, errors) where errors is a list of user-friendly error messages.
+    """
     transactions = []
+    errors = []
+    
     if not os.path.exists(filepath):
-        return transactions
+        return transactions, errors
+    
     try:
         with open(filepath, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if not row:
-                    continue
-                date = parse_date(row.get('date', ''))
-                amount = None
-                try:
-                    amount = float(row.get('amount', '0'))
-                except ValueError:
-                    continue
-                category = row.get('category', 'Other').strip()
-                description = row.get('description', '').strip()
-                notes = row.get('notes', '').strip()
-                id_val = 0
-                try:
-                    id_val = int(row.get('id', '0'))
-                except ValueError:
-                    pass
-                if date is None or amount is None:
-                    continue
-                transactions.append(Transaction(date=date, amount=amount, category=category, description=description, notes=notes, id=id_val))
-    except Exception:
-        return []
-    return transactions
+            file_content = f.read()
+    except UnicodeDecodeError:
+        return [], ["Invalid file format. Please ensure your file is a standard UTF-8 encoded CSV."]
+    except IOError as e:
+        return [], [f"Could not read file: {str(e)}"]
+    
+    # Parse and validate
+    valid_rows, parse_errors = _validate_csv_content(file_content, DEFAULT_CATEGORIES, is_transaction=True)
+    
+    if parse_errors:
+        # Format error messages for display
+        for error_dict in parse_errors:
+            row_num = error_dict['row']
+            row_error_messages = error_dict['errors']
+            errors.append(f"Row {row_num}: {' | '.join(row_error_messages)}")
+    
+    # Convert valid rows to Transaction objects
+    for row in valid_rows:
+        try:
+            id_val = int(row.get('id', 0)) if row.get('id') else 0
+        except (ValueError, TypeError):
+            id_val = 0
+        
+        transactions.append(Transaction(
+            date=row['date'],
+            amount=row['amount'],
+            category=row['category'],
+            description=row['description'],
+            notes=row.get('notes', ''),
+            id=id_val
+        ))
+    
+    return transactions, errors
 
 
 def save_transactions(transactions: List[Transaction], filepath: str):
@@ -162,12 +178,6 @@ def save_recurring_rules(rules: List[RecurringRule], filepath: str):
         json.dump(data, f, indent=2)
 
 
-def generate_new_transaction_id(transactions: List[Transaction]) -> int:
-    if not transactions:
-        return 1
-    return max(tx.id for tx in transactions) + 1
-
-
 def parse_csv_content(content: str, categories: List[str]):
     """
     Parse CSV content string for import.
@@ -177,59 +187,250 @@ def parse_csv_content(content: str, categories: List[str]):
     Expected columns: date, amount, category, description, notes(optional)
     Date format: YYYY-MM-DD
     """
+    return _validate_csv_content(content, categories, is_transaction=True)
+
+
+def _validate_csv_content(content: str, categories: List[str], is_transaction: bool = True) -> Tuple[List[Dict], List[Dict]]:
+    """
+    Internal function to validate CSV content with strict parsing.
+    Returns (valid_rows, errors) where:
+    - valid_rows: list of dicts with validated data
+    - errors: list of dicts {row: int, errors: [messages]}
+    """
     valid = []
     errors = []
+    
     if not content:
         return valid, errors
+    
     try:
-        # csv module expects a file-like, so splitlines and use DictReader
+        # Parse CSV with strict quote handling
         lines = content.splitlines()
-        reader = csv.DictReader(lines)
+        
+        # Validate encoding and quote structure before parsing
+        quote_validation_errors = _validate_quote_structure(lines)
+        if quote_validation_errors:
+            for error_info in quote_validation_errors:
+                errors.append(error_info)
+            return valid, errors
+        
+        # Use strict CSV reader
+        reader = csv.DictReader(lines, quoting=csv.QUOTE_ALL, strict=True)
+        
+        # Get expected columns from header
+        if not reader.fieldnames:
+            errors.append({'row': 1, 'errors': ['CSV file is empty or has no header row.']})
+            return valid, errors
+        
+        expected_columns = {'date', 'amount', 'category', 'description'}
+        if is_transaction:
+            # Optional 'notes' and 'id' for transactions
+            required_columns = expected_columns
+        else:
+            required_columns = expected_columns
+        
+        # Check if all required columns are present
+        if not required_columns.issubset(set(reader.fieldnames)):
+            missing = required_columns - set(reader.fieldnames)
+            errors.append({'row': 1, 'errors': [f'Missing required columns: {", ".join(sorted(missing))}']})
+            return valid, errors
+        
+        expected_column_count = len(reader.fieldnames)
+        
+        for idx, row in enumerate(reader, start=2):
+            row_errors = []
+            
+            if not row:
+                continue
+            
+            # Validate column count (strict schema width)
+            if len(row) != expected_column_count:
+                row_errors.append(f'Expected {expected_column_count} columns, found {len(row)}.')
+                errors.append({'row': idx, 'errors': row_errors})
+                continue
+            
+            date_s = (row.get('date') or '').strip()
+            amount_s = (row.get('amount') or '').strip()
+            category = (row.get('category') or '').strip()
+            description = (row.get('description') or '').strip()
+            notes = (row.get('notes') or '').strip()
+
+            # Validate date
+            date_val = parse_date(date_s)
+            if date_val is None:
+                row_errors.append('Invalid or missing date (YYYY-MM-DD).')
+            else:
+                if date_val > datetime.date.today():
+                    row_errors.append('Date cannot be in the future.')
+
+            # Validate amount
+            try:
+                amount_val = float(amount_s)
+                if amount_val < 0:
+                    row_errors.append('Amount must be non-negative.')
+            except (ValueError, OverflowError):
+                amount_val = None
+                row_errors.append('Invalid or missing amount.')
+
+            # Validate category
+            if not category:
+                row_errors.append('Missing category.')
+            elif category not in categories:
+                row_errors.append(f'Unknown category. Valid categories: {", ".join(categories)}')
+
+            # Validate description
+            if not description:
+                row_errors.append('Description is required.')
+
+            # Check for unclosed quotes or newlines in fields
+            for field_name in ['date', 'amount', 'category', 'description', 'notes']:
+                field_value = row.get(field_name, '')
+                if field_value and '\n' in field_value:
+                    row_errors.append(f'Field "{field_name}" contains illegal newline character (unclosed quote?)')
+
+            if row_errors:
+                errors.append({'row': idx, 'errors': row_errors})
+            else:
+                valid.append({
+                    'date': date_val,
+                    'amount': amount_val,
+                    'category': category,
+                    'description': description,
+                    'notes': notes,
+                    'id': row.get('id', '0')
+                })
+
+    except csv.Error as e:
+        errors.append({'row': 0, 'errors': [f'CSV parsing error: {str(e)}']})
     except Exception as e:
-        errors.append({'row': 0, 'errors': [f'Could not parse CSV: {e}']})
-        return valid, errors
-
-    for idx, row in enumerate(reader, start=2):
-        # start=2 to account for header row as row 1
-        row_errors = []
-        if not row:
-            continue
-        date_s = (row.get('date') or '').strip()
-        amount_s = (row.get('amount') or '').strip()
-        category = (row.get('category') or '').strip()
-        description = (row.get('description') or '').strip()
-        notes = (row.get('notes') or '').strip()
-
-        # date
-        date_val = parse_date(date_s)
-        if date_val is None:
-            row_errors.append('Invalid or missing date (YYYY-MM-DD).')
-        else:
-            if date_val > datetime.date.today():
-                row_errors.append('Date cannot be in the future.')
-
-        # amount
-        try:
-            amount_val = float(amount_s)
-            if amount_val < 0:
-                row_errors.append('Amount must be non-negative.')
-        except Exception:
-            amount_val = None
-            row_errors.append('Invalid or missing amount.')
-
-        # category
-        if not category:
-            row_errors.append('Missing category.')
-        elif category not in categories:
-            row_errors.append('Unknown category.')
-
-        # description
-        if not description:
-            row_errors.append('Description is required.')
-
-        if row_errors:
-            errors.append({'row': idx, 'errors': row_errors})
-        else:
-            valid.append({'date': date_val, 'amount': amount_val, 'category': category, 'description': description, 'notes': notes})
-
+        errors.append({'row': 0, 'errors': [f'Unexpected error parsing CSV: {str(e)}']})
+    
     return valid, errors
+
+
+def _validate_quote_structure(lines: List[str]) -> List[Dict]:
+    """
+    Validate that quotes are properly balanced in each line.
+    Returns list of error dicts if issues found, empty list if valid.
+    """
+    errors = []
+    
+    for line_idx, line in enumerate(lines, start=1):
+        if not line:
+            continue
+        
+        # Skip header row
+        if line_idx == 1:
+            continue
+        
+        # Track quote state to detect unclosed quotes
+        in_quotes = False
+        i = 0
+        while i < len(line):
+            char = line[i]
+            
+            if char == '"':
+                # Check if it's an escaped quote (double quote)
+                if i + 1 < len(line) and line[i + 1] == '"':
+                    i += 2  # Skip both quotes
+                    continue
+                else:
+                    in_quotes = not in_quotes
+            
+            i += 1
+        
+        if in_quotes:
+            errors.append({
+                'row': line_idx,
+                'errors': ['Unclosed quote detected. Row may have malformed quotes or may span multiple lines.']
+            })
+    
+    return errors
+
+
+def generate_new_transaction_id(transactions: List[Transaction]) -> int:
+    """Generate a new unique transaction ID."""
+    if not transactions:
+        return 1
+    return max(tx.id for tx in transactions) + 1
+
+
+def _detect_binary_file_type(file_bytes: bytes) -> str:
+    """
+    Detect common binary file types by their magic bytes (file signatures).
+    Returns the detected file type name, or None if appears to be text.
+    """
+    if len(file_bytes) < 4:
+        return None
+    
+    # Common binary file signatures
+    signatures = {
+        b'%PDF': 'PDF',
+        b'PK\x03\x04': 'ZIP/Excel',  # ZIP format (used by modern Excel)
+        b'\xd0\xcf\x11\xe0': 'OLE2/Word/Excel',  # OLE2 format (older Office)
+        b'\xff\xd8\xff': 'JPEG Image',
+        b'\x89PNG': 'PNG Image',
+        b'GIF8': 'GIF Image',
+        b'BM': 'BMP Image',
+        b'RIFF': 'WAV/RIFF',
+        b'\x1f\x8b': 'GZIP',
+        b'7z\xbc\xaf': '7-Zip',
+    }
+    
+    for sig_bytes, file_type in signatures.items():
+        if file_bytes.startswith(sig_bytes):
+            return file_type
+    
+    return None
+
+
+def validate_csv_file_upload(file_bytes: bytes) -> Tuple[str, str]:
+    """
+    Validate an uploaded file for CSV compatibility.
+    Returns (error_message, None) on error, or (None, decoded_content) on success.
+    
+    Checks for:
+    1. Binary file signatures
+    2. Valid UTF-8 encoding
+    3. Reasonable file size
+    """
+    # Check file size (prevent huge uploads)
+    if len(file_bytes) == 0:
+        return "File is empty.", None
+    
+    if len(file_bytes) > 10_000_000:  # 10 MB limit
+        return "File is too large (maximum 10 MB).", None
+    
+    # Check for binary file signatures
+    detected_type = _detect_binary_file_type(file_bytes)
+    if detected_type:
+        return (
+            f"Invalid file type detected ({detected_type}). "
+            "Please upload a standard text-based CSV file, not a renamed PDF, Excel workbook, or other binary document.",
+            None
+        )
+    
+    # Try to decode with UTF-8
+    try:
+        # First try UTF-8 with BOM stripping
+        content = file_bytes.decode('utf-8-sig')
+        return None, content
+    except UnicodeDecodeError:
+        pass
+    
+    # Try common alternative encodings
+    for encoding in ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']:
+        try:
+            content = file_bytes.decode(encoding)
+            # Basic sanity check: should have some comma separators and newlines
+            if ',' in content or '\n' in content:
+                return None, content
+        except (UnicodeDecodeError, LookupError):
+            continue
+    
+    # If all decoding attempts failed
+    return (
+        "Could not read file. Please ensure it is a valid CSV saved with UTF-8 encoding "
+        "(standard Excel CSV export).",
+        None
+    )

@@ -1,5 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
+<style>
+  .imported-row {
+    background-color: #c8e6c9;
+    animation: fadeHighlight 4s ease-out;
+  }
+  
+  @keyframes fadeHighlight {
+    0% {
+      background-color: #81c784;
+    }
+    100% {
+      background-color: #c8e6c9;
+    }
+  }
+</style>
+
 <h2>All Transactions</h2>
 <form method="GET" action="{{ url_for('manage_transactions') }}" class="filter-form">
   <label for="start_date">Start date</label>
@@ -22,7 +38,7 @@
 <table>
   <tr><th>Date</th><th>Amount</th><th>Category</th><th>Description</th><th>Notes</th><th>Actions</th></tr>
   {% for tx in transactions %}
-  <tr>
+  <tr{% if tx.id in imported_ids %} class="imported-row"{% endif %}>
     <td>{{ tx.date }}</td>
     <td>HK$ {{ '%.2f'|format(tx.amount) }}</td>
     <td>{{ tx.category }}</td>

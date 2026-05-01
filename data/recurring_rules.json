@@ -2,21 +2,21 @@
   {
     "name": "Netflix Subscription",
     "category": "Entertainment",
-    "amount": 108.00,
+    "amount": 108.0,
     "description": "Monthly Netflix subscription",
     "frequency": "monthly",
     "start_date": "2025-12-05",
     "end_date": null,
-    "last_generated_date": "2026-03-05"
+    "last_generated_date": "2026-04-05"
   },
   {
     "name": "Gym Membership",
     "category": "Entertainment",
-    "amount": 299.00,
+    "amount": 299.0,
     "description": "Monthly gym membership",
     "frequency": "monthly",
     "start_date": "2025-12-01",
     "end_date": null,
-    "last_generated_date": "2026-03-01"
+    "last_generated_date": "2026-05-01"
   }
 ]

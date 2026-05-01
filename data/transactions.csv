@@ -34,3 +34,6 @@ id,date,amount,category,description,notes
 33,2026-04-08,45.00,Transport,Ride-hailing service,
 34,2026-04-05,140.00,Shopping,Home décor,
 35,2026-04-02,55.00,Entertainment,Online movie rental,
+36,2026-04-05,108.00,Entertainment,[Recurring] Netflix Subscription,Monthly Netflix subscription
+37,2026-04-01,299.00,Entertainment,[Recurring] Gym Membership,Monthly gym membership
+38,2026-05-01,299.00,Entertainment,[Recurring] Gym Membership,Monthly gym membership
