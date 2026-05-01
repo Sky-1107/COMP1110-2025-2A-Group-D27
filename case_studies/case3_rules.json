@@ -1,0 +1,3 @@
+[
+  { "category": "Entertainment", "period": "monthly", "threshold": 120, "alert_type": "exceed" }
+]
