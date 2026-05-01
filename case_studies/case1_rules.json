@@ -1,0 +1,3 @@
+[
+  { "category": "Food", "period": "daily", "threshold": 50, "alert_type": "exceed" }
+]
