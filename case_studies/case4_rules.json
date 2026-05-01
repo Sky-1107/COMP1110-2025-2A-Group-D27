@@ -1,0 +1,6 @@
+[
+  { "category": "Food", "period": "daily", "threshold": 50, "alert_type": "exceed" },
+  { "category": "Transport", "period": "weekly", "threshold": 150, "alert_type": "exceed" },
+  { "category": "Shopping", "period": "monthly", "threshold": 500, "alert_type": "exceed" },
+  { "category": "Food", "period": "percentage", "threshold": 30, "alert_type": "percentage" }
+]
