@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Netflix Subscription",
+    "category": "Entertainment",
+    "amount": 39.00,
+    "description": "Monthly Netflix subscription",
+    "frequency": "monthly",
+    "start_date": "2026-01-02",
+    "end_date": null,
+    "last_generated_date": "2026-03-02"
+  },
+  {
+    "name": "Spotify Premium",
+    "category": "Entertainment",
+    "amount": 19.00,
+    "description": "Monthly Spotify music streaming",
+    "frequency": "monthly",
+    "start_date": "2026-01-05",
+    "end_date": null,
+    "last_generated_date": "2026-03-05"
+  },
+  {
+    "name": "YouTube Premium",
+    "category": "Entertainment",
+    "amount": 15.00,
+    "description": "Monthly YouTube Premium membership",
+    "frequency": "monthly",
+    "start_date": "2026-01-10",
+    "end_date": null,
+    "last_generated_date": "2026-03-10"
+  },
+  {
+    "name": "Game Pass",
+    "category": "Entertainment",
+    "amount": 20.00,
+    "description": "Monthly Xbox Game Pass subscription",
+    "frequency": "monthly",
+    "start_date": "2026-01-22",
+    "end_date": null,
+    "last_generated_date": "2026-03-22"
+  }
+]
