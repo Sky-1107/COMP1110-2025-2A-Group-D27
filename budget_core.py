@@ -20,6 +20,25 @@ class BudgetRule:
     threshold: float
     alert_type: str  # exceed, percentage
 
+    def __post_init__(self):
+        """Validate BudgetRule data after initialization."""
+        # Validate category is not empty
+        if not self.category or not self.category.strip():
+            raise ValueError("Category cannot be empty")
+        
+        # Validate period is one of allowed values
+        allowed_periods = {'daily', 'weekly', 'monthly', 'percentage'}
+        if self.period not in allowed_periods:
+            raise ValueError(f"Period must be one of {allowed_periods}, got '{self.period}'")
+        
+        # Validate threshold is strictly positive
+        if self.threshold <= 0:
+            raise ValueError(f"Threshold must be strictly positive, got {self.threshold}")
+        
+        # Validate alert_type is one of allowed values
+        allowed_alert_types = {'exceed', 'percentage'}
+        if self.alert_type not in allowed_alert_types:
+            raise ValueError(f"Alert type must be one of {allowed_alert_types}, got '{self.alert_type}'")
 @dataclass
 class RecurringRule:
     name: str
@@ -31,7 +50,38 @@ class RecurringRule:
     end_date: datetime.date = None
     last_generated_date: datetime.date = None
 
+    def __post_init__(self):
+        """Validate RecurringRule data after initialization."""
+        # Validate amount is strictly positive
+        if self.amount <= 0:
+            raise ValueError(f"Amount must be strictly positive, got {self.amount}")
+        
+        # Validate frequency is one of allowed values
+        allowed_frequencies = {'daily', 'weekly', 'monthly', 'yearly'}
+        if self.frequency not in allowed_frequencies:
+            raise ValueError(f"Frequency must be one of {allowed_frequencies}, got '{self.frequency}'")
+        
+        # Validate end_date is not earlier than start_date
+        if self.end_date is not None and self.end_date < self.start_date:
+            raise ValueError(f"End date ({self.end_date}) cannot be earlier than start date ({self.start_date})")
+        
+        # Validate last_generated_date is not in the future
+        today = datetime.date.today()
+        if self.last_generated_date is not None and self.last_generated_date > today:
+            raise ValueError(f"Last generated date ({self.last_generated_date}) cannot be in the future")
+
 DEFAULT_CATEGORIES = ["Food", "Transport", "Shopping", "Bills", "Entertainment", "Other"]
+
+def validate_category(category: str) -> bool:
+    """Validate that a category name is valid (non-empty string)."""
+    return isinstance(category, str) and len(category.strip()) > 0
+
+
+def validate_categories(categories: List[str]) -> bool:
+    """Validate that all categories are valid non-empty strings."""
+    if not isinstance(categories, list):
+        return False
+    return all(validate_category(cat) for cat in categories)
 
 def spending_by_category(transactions: List[Transaction]) -> Dict[str, float]:
     totals = {}

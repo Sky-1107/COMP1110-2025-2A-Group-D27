@@ -2,7 +2,7 @@ import os
 import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, Response, session
 from data_loader import load_transactions, save_transactions, load_budget_rules, save_budget_rules, load_categories, save_categories, load_recurring_rules, save_recurring_rules, generate_new_transaction_id, parse_csv_content, validate_csv_file_upload
-from budget_core import Transaction, BudgetRule, RecurringRule, DEFAULT_CATEGORIES, spending_by_category, spending_by_period, top_categories, spending_trend, check_alerts, monthly_spending_trend
+from budget_core import Transaction, BudgetRule, RecurringRule, DEFAULT_CATEGORIES, spending_by_category, spending_by_period, top_categories, spending_trend, check_alerts, monthly_spending_trend, validate_categories
 from recurring_handler import process_recurring_transactions
 from export_utils import export_csv, export_pdf
 
@@ -349,16 +349,20 @@ def settings_save():
     if categories_input:
         categories = [c.strip() for c in categories_input.split(',') if c.strip()]
         if categories:
-            save_categories(categories, CATEGORIES_FILE)
-            flash('Categories updated', 'success')
+            if validate_categories(categories):
+                save_categories(categories, CATEGORIES_FILE)
+                flash('Categories updated', 'success')
+            else:
+                flash('No valid categories provided; ensure all category names are non-empty.', 'error')
         else:
             flash('No valid categories provided', 'error')
 
     # rules_text area (optional): each line category,period,threshold,alert_type
     if rules_input:
         new_rules = []
+        rule_errors = []
         for line in rules_input.splitlines():
-            parts = [p.strip() for p in line.split(',') if p.strip()]
+            parts = [p.strip() for p in line.split(',')]
             if len(parts) != 4:
                 continue
             cat, period, thr, atype = parts
@@ -366,18 +370,25 @@ def settings_save():
                 thr_val = float(thr)
             except ValueError:
                 continue
-            new_rules.append(BudgetRule(category=cat, period=period, threshold=thr_val, alert_type=atype))
+            try:
+                new_rules.append(BudgetRule(category=cat, period=period, threshold=thr_val, alert_type=atype))
+            except ValueError as e:
+                rule_errors.append(f"Rule '{line}' skipped: {e}")
         if new_rules:
             save_budget_rules(new_rules, BUDGET_RULES_FILE)
             flash('Budget rules updated', 'success')
         else:
             flash('No valid budget rules parsed', 'error')
+        # show up to 5 representative rule errors
+        for err in rule_errors[:5]:
+            flash(err, 'error')
 
     # recurring rules: each line name,category,amount,description,frequency,start_date,end_date
     if recurring_input:
         new_recurring = []
+        recurring_errors = []
         for line in recurring_input.splitlines():
-            parts = [p.strip() for p in line.split(',') if p.strip()]
+            parts = [p.strip() for p in line.split(',')]
             if len(parts) < 7:
                 continue
             name, cat, amt, desc, freq, start, end = parts[:7]
@@ -387,12 +398,17 @@ def settings_save():
                 end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date() if end else None
             except ValueError:
                 continue
-            new_recurring.append(RecurringRule(name=name, category=cat, amount=amt_val, description=desc, frequency=freq, start_date=start_date, end_date=end_date))
+            try:
+                new_recurring.append(RecurringRule(name=name, category=cat, amount=amt_val, description=desc, frequency=freq, start_date=start_date, end_date=end_date))
+            except ValueError as e:
+                recurring_errors.append(f"Recurring '{line}' skipped: {e}")
         if new_recurring:
             save_recurring_rules(new_recurring, RECURRING_RULES_FILE)
             flash('Recurring rules updated', 'success')
         else:
             flash('No valid recurring rules parsed', 'error')
+        for err in recurring_errors[:5]:
+            flash(err, 'error')
 
     return redirect(url_for('settings'))
 
