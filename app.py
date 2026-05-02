@@ -45,13 +45,13 @@ def ensure_data_files():
         save_recurring_rules([], RECURRING_RULES_FILE)
 
 
-def add_recurring_transactions():
-    transactions = load_transactions(TRANSACTIONS_FILE)
-    new_recurring = process_recurring_transactions(DATA_DIR)
+def add_recurring_transactions(transactions):
+    new_recurring = process_recurring_transactions(DATA_DIR, transactions)
     if new_recurring:
         transactions.extend(new_recurring)
         save_transactions(transactions, TRANSACTIONS_FILE)
         flash(f'Added {len(new_recurring)} recurring transactions.', 'info')
+    return transactions
 
 
 @app.route('/')
@@ -62,7 +62,7 @@ def index():
     transactions = load_transactions(TRANSACTIONS_FILE)
     
     # Process recurring transactions
-    add_recurring_transactions()
+    transactions = add_recurring_transactions(transactions)
     
     stats_total = sum(tx.amount for tx in transactions)
     stats_by_category = spending_by_category(transactions)
@@ -378,7 +378,8 @@ def settings_save():
             flash('Recurring rules updated', 'success')
 
             # Then process the recurring rules (including the new ones)
-            add_recurring_transactions()
+            transactions = load_transactions(TRANSACTIONS_FILE)
+            add_recurring_transactions(transactions)
         else:
             flash('No valid recurring rules parsed', 'error')
         for err in recurring_errors[:5]:
