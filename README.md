@@ -23,6 +23,7 @@ A Flask-based web app for logging and summarizing expenditure, checking budget r
 ```bash
 python -m venv venv
 venv\Scripts\activate  # Windows
+source venv/bin/activate  # macOS/Linux
 ```
 
 2. Install dependencies:
