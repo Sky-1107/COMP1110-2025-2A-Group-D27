@@ -159,13 +159,15 @@ def parse_csv_content(content: str, categories: List[str]) -> Tuple[List[Dict], 
                 errors.append(error_info)
             return valid, errors
         
-        # Use strict CSV reader
-        reader = csv.DictReader(lines, quoting=csv.QUOTE_ALL, strict=True)
+        # Use strict CSV reader and normalize headers for case-insensitive matching.
+        reader = csv.DictReader(lines, strict=True)
         
         # Get expected columns from header
         if not reader.fieldnames:
             errors.append({'row': 1, 'errors': ['CSV file is empty or has no header row.']})
             return valid, errors
+
+        reader.fieldnames = [(name or '').strip().lower() for name in reader.fieldnames]
         
         # 'notes' and 'id' are optional
         required_columns = {'date', 'amount', 'category', 'description'}

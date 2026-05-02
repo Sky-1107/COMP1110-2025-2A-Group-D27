@@ -12,7 +12,7 @@ def export_csv(transactions: List[Transaction]) -> Response:
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['ID', 'Date', 'Amount', 'Category', 'Description', 'Notes'])
+    writer.writerow(['id', 'date', 'amount', 'category', 'description', 'notes'])
     for tx in transactions:
         writer.writerow([tx.id, tx.date.strftime('%Y-%m-%d'), f"{tx.amount:.2f}", tx.category, tx.description, tx.notes])
     
