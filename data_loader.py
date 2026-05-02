@@ -222,34 +222,20 @@ def parse_csv_content(content: str, categories: List[str]) -> Tuple[List[Dict], 
     return valid, errors
 
 
-def load_transactions(filepath: str) -> Tuple[List[Transaction], List[str]]:
-    """
-    Load and return transactions from CSV file with strict validation.
-    Returns (transactions, errors) where errors is a list of user-friendly error messages.
-    """
-    transactions = []
-    errors = []
-    
+def load_transactions(filepath: str) -> List[Transaction]:
+    """Load and return transactions from CSV file with strict validation."""
     if not os.path.exists(filepath):
-        return transactions, errors
+        return []  
     
+    transactions = []
     try:
         with open(filepath, newline='', encoding='utf-8') as f:
             file_content = f.read()
-    except UnicodeDecodeError:
-        return [], ["Invalid file format. Please ensure your file is a standard UTF-8 encoded CSV."]
-    except IOError as e:
-        return [], [f"Could not read file: {str(e)}"]
+    except (UnicodeDecodeError, IOError):
+        return []
     
-    # Parse and validate
-    valid_rows, parse_errors = parse_csv_content(file_content, DEFAULT_CATEGORIES)
-    
-    if parse_errors:
-        # Format error messages for display
-        for error_dict in parse_errors:
-            row_num = error_dict['row']
-            row_error_messages = error_dict['errors']
-            errors.append(f"Row {row_num}: {' | '.join(row_error_messages)}")
+    # Parse CSV
+    valid_rows, _ = parse_csv_content(file_content, DEFAULT_CATEGORIES)
     
     # Convert valid rows to Transaction objects
     for row in valid_rows:
@@ -268,7 +254,7 @@ def load_transactions(filepath: str) -> Tuple[List[Transaction], List[str]]:
             id=id_val
         ))
     
-    return transactions, errors
+    return transactions
 
 
 def save_transactions(transactions: List[Transaction], filepath: str):

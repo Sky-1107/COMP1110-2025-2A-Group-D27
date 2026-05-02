@@ -1,6 +1,6 @@
 import random
 import datetime
-from budget_core import Transaction, DEFAULT_CATEGORIES
+from budget_core import DEFAULT_CATEGORIES, Transaction
 
 
 def generate_test_transactions(num_days: int = 30, categories=None, base_seed: int = 42):
@@ -11,7 +11,7 @@ def generate_test_transactions(num_days: int = 30, categories=None, base_seed: i
     transactions = []
     for i in range(num_days):
         day = today - datetime.timedelta(days=i)
-        num_per_day = random.choice([0, 1, 2, 3])
+        num_per_day = random.randint(0, 3)
         for j in range(num_per_day):
             amount = round(random.uniform(0, 120), 2)
             if random.random() < 0.05:

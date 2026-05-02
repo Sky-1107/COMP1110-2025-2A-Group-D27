@@ -51,7 +51,7 @@ def index():
     ensure_data_files()
     categories = load_categories(CATEGORIES_FILE)
     rules = load_budget_rules(BUDGET_RULES_FILE)
-    transactions, load_errors = load_transactions(TRANSACTIONS_FILE)
+    transactions = load_transactions(TRANSACTIONS_FILE)
     
     # Process recurring transactions
     new_recurring = process_recurring_transactions(DATA_DIR, transactions)
@@ -91,7 +91,7 @@ def add_transaction():
             flash(err, 'error')
         return render_template('add_transaction.html', categories=categories, prev=request.form)
 
-    transactions, load_errors = load_transactions(TRANSACTIONS_FILE)
+    transactions = load_transactions(TRANSACTIONS_FILE)
     new_id = generate_new_transaction_id(transactions)
     new_tx = Transaction(
         date = datetime.datetime.strptime(date_input, '%Y-%m-%d').date(),
@@ -116,7 +116,7 @@ def add_transaction():
 def edit_transaction_form(txn_id):
     ensure_data_files()
     categories = load_categories(CATEGORIES_FILE)
-    transactions, load_errors = load_transactions(TRANSACTIONS_FILE)
+    transactions = load_transactions(TRANSACTIONS_FILE)
     tx = next((t for t in transactions if t.id == txn_id), None)
     if not tx:
         flash('Transaction not found.', 'error')
@@ -128,7 +128,7 @@ def edit_transaction_form(txn_id):
 def edit_transaction(txn_id):
     ensure_data_files()
     categories = load_categories(CATEGORIES_FILE)
-    transactions, load_errors = load_transactions(TRANSACTIONS_FILE)
+    transactions = load_transactions(TRANSACTIONS_FILE)
     tx = next((t for t in transactions if t.id == txn_id), None)
     if not tx:
         flash('Transaction not found.', 'error')
@@ -164,7 +164,7 @@ def edit_transaction(txn_id):
 @app.route('/delete/<int:txn_id>', methods=['GET'])
 def delete_transaction(txn_id):
     ensure_data_files()
-    transactions, load_errors = load_transactions(TRANSACTIONS_FILE)
+    transactions = load_transactions(TRANSACTIONS_FILE)
     transactions = [t for t in transactions if t.id != txn_id]
     try:
         save_transactions(transactions, TRANSACTIONS_FILE)
@@ -178,7 +178,7 @@ def delete_transaction(txn_id):
 def manage_transactions():
     ensure_data_files()
     categories = load_categories(CATEGORIES_FILE)
-    transactions, load_errors = load_transactions(TRANSACTIONS_FILE)
+    transactions = load_transactions(TRANSACTIONS_FILE)
     start_date = request.args.get('start_date', '').strip()
     end_date = request.args.get('end_date', '').strip()
     filter_category = request.args.get('category', '').strip()
@@ -243,7 +243,7 @@ def import_transactions():
 
     imported = 0
     imported_ids = []
-    transactions, load_errors = load_transactions(TRANSACTIONS_FILE)
+    transactions = load_transactions(TRANSACTIONS_FILE)
     for row in valid_rows:
         new_id = generate_new_transaction_id(transactions)
         tx = Transaction(date=row['date'], amount=row['amount'], category=row['category'], description=row['description'], notes=row.get('notes', ''), id=new_id)
@@ -275,7 +275,7 @@ def import_transactions():
 @app.route('/summaries', methods=['GET'])
 def summaries():
     ensure_data_files()
-    transactions, load_errors = load_transactions(TRANSACTIONS_FILE)
+    transactions = load_transactions(TRANSACTIONS_FILE)
     by_cat = spending_by_category(transactions)
     by_day = spending_by_period(transactions, 'daily')
     by_week = spending_by_period(transactions, 'weekly')
@@ -291,7 +291,7 @@ def alerts_page():
     ensure_data_files()
     categories = load_categories(CATEGORIES_FILE)
     rules = load_budget_rules(BUDGET_RULES_FILE)
-    transactions, load_errors = load_transactions(TRANSACTIONS_FILE)
+    transactions = load_transactions(TRANSACTIONS_FILE)
     alerts = check_alerts(transactions, rules, categories)
     return render_template('alerts.html', alerts=alerts)
 
@@ -382,14 +382,14 @@ def settings_save():
 @app.route('/export/csv', methods=['GET'])
 def export_csv_route():
     ensure_data_files()
-    transactions, load_errors = load_transactions(TRANSACTIONS_FILE)
+    transactions = load_transactions(TRANSACTIONS_FILE)
     return export_csv(transactions)
 
 
 @app.route('/export/pdf', methods=['GET'])
 def export_pdf_route():
     ensure_data_files()
-    transactions, load_errors = load_transactions(TRANSACTIONS_FILE)
+    transactions = load_transactions(TRANSACTIONS_FILE)
     return export_pdf(transactions)
 
 
