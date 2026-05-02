@@ -1,8 +1,10 @@
-#budget_core.py
-
 import datetime
 from dataclasses import dataclass
 from typing import List, Dict, Tuple
+
+
+DEFAULT_CATEGORIES = ["Food", "Transport", "Shopping", "Bills", "Entertainment", "Other"]
+
 
 @dataclass
 class Transaction:
@@ -70,7 +72,6 @@ class RecurringRule:
         if self.last_generated_date is not None and self.last_generated_date > today:
             raise ValueError(f"Last generated date ({self.last_generated_date}) cannot be in the future")
 
-DEFAULT_CATEGORIES = ["Food", "Transport", "Shopping", "Bills", "Entertainment", "Other"]
 
 def validate_category(category: str) -> bool:
     """Validate that a category name is valid (non-empty string)."""
@@ -83,11 +84,39 @@ def validate_categories(categories: List[str]) -> bool:
         return False
     return all(validate_category(cat) for cat in categories)
 
+
+def validate_transaction(date, amount, category, categories, description):
+    """Validate a transaction"""
+    errors = []
+    try:
+        date_val = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+        if date_val > datetime.date.today():
+            errors.append('Date cannot be in the future.')
+    except ValueError:
+        errors.append('Invalid date format. Use YYYY-MM-DD.')
+
+    try:
+        amount_val = float(amount)
+        if amount_val < 0:
+            errors.append('Amount must be non-negative.')
+    except ValueError:
+        errors.append('Invalid amount.')
+
+    if category not in categories:
+        errors.append('Category must be one of the allowed categories.')
+
+    if not description:
+        errors.append('Description is required.')
+
+    return errors
+
+
 def spending_by_category(transactions: List[Transaction]) -> Dict[str, float]:
     totals = {}
     for tx in transactions:
         totals[tx.category] = totals.get(tx.category, 0.0) + tx.amount
     return totals
+
 
 def spending_by_period(transactions: List[Transaction], period: str = "daily") -> Dict[str, float]:
     totals = {}
@@ -106,6 +135,7 @@ def spending_by_period(transactions: List[Transaction], period: str = "daily") -
     # Sort `totals` by its keys in ascending order
     return dict(sorted(totals.items()))
 
+
 def top_categories(transactions: List[Transaction], n: int = 3) -> List[Tuple[str, float]]:
     '''
     Sort the categories in descending order of amount spent, and return the first `n` categories.
@@ -113,6 +143,7 @@ def top_categories(transactions: List[Transaction], n: int = 3) -> List[Tuple[st
 
     totals = spending_by_category(transactions)
     return sorted(totals.items(), key=lambda x: x[1], reverse=True)[:n]
+
 
 def spending_trend(transactions: List[Transaction], n: int = 7) -> Dict[str, float]:
     '''

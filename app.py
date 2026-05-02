@@ -2,7 +2,7 @@ import os
 import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from data_loader import load_transactions, save_transactions, load_budget_rules, save_budget_rules, load_categories, save_categories, load_recurring_rules, save_recurring_rules, generate_new_transaction_id, parse_csv_content, validate_csv_file_upload
-from budget_core import Transaction, BudgetRule, RecurringRule, DEFAULT_CATEGORIES, spending_by_category, spending_by_period, top_categories, spending_trend, check_alerts, monthly_spending_trend, validate_categories
+from budget_core import DEFAULT_CATEGORIES, Transaction, BudgetRule, RecurringRule, validate_transaction, spending_by_category, spending_by_period, top_categories, spending_trend, check_alerts, monthly_spending_trend, validate_categories
 from recurring_handler import process_recurring_transactions
 from export_utils import export_csv, export_pdf
 
@@ -45,6 +45,7 @@ def ensure_data_files():
         save_recurring_rules([], RECURRING_RULES_FILE)
 
 
+
 @app.route('/')
 def index():
     ensure_data_files()
@@ -83,29 +84,8 @@ def add_transaction():
     amount_input = request.form.get('amount', '').strip()
     category = request.form.get('category', '').strip()
     description = request.form.get('description', '').strip()
-    notes = request.form.get('notes', '').strip()
 
-    errors = []
-    try:
-        date_val = datetime.datetime.strptime(date_input, '%Y-%m-%d').date()
-        if date_val > datetime.date.today():
-            errors.append('Date cannot be in the future.')
-    except ValueError:
-        errors.append('Invalid date format. Use YYYY-MM-DD.')
-
-    try:
-        amount_val = float(amount_input)
-        if amount_val < 0:
-            errors.append('Amount must be non-negative.')
-    except ValueError:
-        errors.append('Invalid amount.')
-
-    if category not in categories:
-        errors.append('Category must be one of the allowed categories.')
-
-    if not description:
-        errors.append('Description is required.')
-
+    errors = validate_transaction(date_input, amount_input, category, categories, description)
     if errors:
         for err in errors:
             flash(err, 'error')
@@ -113,7 +93,14 @@ def add_transaction():
 
     transactions, load_errors = load_transactions(TRANSACTIONS_FILE)
     new_id = generate_new_transaction_id(transactions)
-    new_tx = Transaction(date=date_val, amount=amount_val, category=category, description=description, notes=notes, id=new_id)
+    new_tx = Transaction(
+        date = datetime.datetime.strptime(date_input, '%Y-%m-%d').date(),
+        amount = float(amount_input),
+        category = category,
+        description = description,
+        notes = request.form.get('notes', '').strip(),
+        id = new_id
+    )
     transactions.append(new_tx)
 
     try:
@@ -151,40 +138,19 @@ def edit_transaction(txn_id):
     amount_input = request.form.get('amount', '').strip()
     category = request.form.get('category', '').strip()
     description = request.form.get('description', '').strip()
-    notes = request.form.get('notes', '').strip()
 
-    errors = []
-    try:
-        date_val = datetime.datetime.strptime(date_input, '%Y-%m-%d').date()
-        if date_val > datetime.date.today():
-            errors.append('Date cannot be in the future.')
-    except ValueError:
-        errors.append('Invalid date format. Use YYYY-MM-DD.')
-
-    try:
-        amount_val = float(amount_input)
-        if amount_val < 0:
-            errors.append('Amount must be non-negative.')
-    except ValueError:
-        errors.append('Invalid amount.')
-
-    if category not in categories:
-        errors.append('Category must be one of the allowed categories.')
-
-    if not description:
-        errors.append('Description is required.')
-
+    errors = validate_transaction(date_input, amount_input, category, categories, description)
     if errors:
         for err in errors:
             flash(err, 'error')
         return render_template('edit_transaction.html', transaction=tx, categories=categories, prev=request.form)
 
     # Update transaction
-    tx.date = date_val
-    tx.amount = amount_val
+    tx.date = datetime.datetime.strptime(date_input, '%Y-%m-%d').date()
+    tx.amount = float(amount_input)
     tx.category = category
     tx.description = description
-    tx.notes = notes
+    tx.notes = request.form.get('notes', '').strip()
 
     try:
         save_transactions(transactions, TRANSACTIONS_FILE)
