@@ -37,9 +37,10 @@ pip install -r requirements.txt
 python app.py
 ```
 
-4. Open browser:
+4. Open browser (Use any one of them):
 
-- `http://localhost:5000`
+- `http://127.0.0.1:5001`
+- `http://192.168.1.9:5001`
 
 ## Usage
 
